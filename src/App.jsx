@@ -5,7 +5,7 @@ function App() {
   const [users, setUsers] = useState([]);
 
   useEffect(() => {
-    axios.get("http://localhost:5000/api/users")
+    axios.get("http://api.genzcodershub.com/api/users")
       .then(res => setUsers(res.data))
       .catch(err => console.error(err));
   }, []);
