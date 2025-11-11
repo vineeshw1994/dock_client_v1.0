@@ -1,0 +1,43 @@
+name: Deploy Client
+
+on:
+  push:
+    branches: ["main"]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      # Checkout repo
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      # SSH Deploy
+      - name: Deploy via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.PROD_HOST }}
+          username: ${{ secrets.PROD_USER }}
+          key: ${{ secrets.PROD_SSH_KEY }}
+          port: 22
+          script: |
+            echo "🔄 Deploying Client..."
+
+            cd /var/www/Git_Actions/dock_client_v1.0
+
+            git checkout main
+            git fetch origin
+            git reset --hard origin/main
+            git clean -fd
+
+            echo "📦 Installing dependencies..."
+            npm install
+
+            echo "🏗️ Building frontend..."
+            npm run build
+
+            echo "🚀 Restarting PM2..."
+            pm2 restart F_GH_A_client || pm2 start "npx serve -s dist" --name F_GH_A_client
+
+            echo "✅ Client deployed successfully!"
