@@ -1,31 +1,34 @@
-name: Deploy Client (Dockerized)
+name: 🚀 Deploy Frontend (Dockerized)
 
 on:
   push:
     branches: ["main"]
 
 jobs:
-  deploy:
+  deploy-frontend:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout the code
+      # ✅ Step 1: Checkout the latest code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # Build & Push Docker Image to Docker Hub
-      - name: Build and Push Docker Image
+      # ✅ Step 2: Build & Push Docker image to Docker Hub
+      - name: Build and Push Frontend Image
         run: |
-          echo "🔧 Building frontend Docker image..."
-          docker build -t vineeshw1994/genz-frontend -f Dockerfile .
+          echo "🔧 Building frontend image..."
+          docker build --no-cache -t vineeshw1994/genz-frontend:${{ github.sha }} -f Dockerfile .
 
           echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USER }}" --password-stdin
 
-          echo "📦 Pushing frontend image to Docker Hub..."
+          echo "🏷️ Tagging and pushing frontend image..."
+          docker tag vineeshw1994/genz-frontend:${{ github.sha }} vineeshw1994/genz-frontend:latest
+
+          docker push vineeshw1994/genz-frontend:${{ github.sha }}
           docker push vineeshw1994/genz-frontend:latest
 
-      # SSH Deploy to production server
-      - name: SSH Deploy to Server
+      # ✅ Step 3: SSH into server and update container
+      - name: SSH Deploy Frontend
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.PROD_HOST }}
@@ -33,18 +36,18 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           port: 22
           script: |
+            set -e
             echo "🚀 Deploying Frontend..."
 
             cd /var/www/Git_Actions
 
-            echo "🧱 Pulling latest frontend Docker image..."
-            docker pull vineeshw1994/genz-frontend:latest
+            echo "🧱 Pulling latest frontend image..."
+            docker compose pull frontend
 
-            echo "🧹 Removing old unused images..."
+            echo "♻️ Recreating frontend container..."
+            docker compose up -d --force-recreate frontend
+
+            echo "🧹 Cleaning unused images..."
             docker image prune -f
-
-            echo "♻️ Restarting frontend container..."
-            docker-compose pull frontend
-            docker-compose up -d frontend
 
             echo "✅ Frontend deployed successfully!"
