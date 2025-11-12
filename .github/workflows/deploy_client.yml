@@ -40,7 +40,11 @@ jobs:
             echo "🧱 Pulling latest frontend Docker image..."
             docker pull vineeshw1994/genz-frontend:latest
 
+            echo "🧹 Removing old unused images..."
+            docker image prune -f
+
             echo "♻️ Restarting frontend container..."
+            docker-compose pull frontend
             docker-compose up -d frontend
 
             echo "✅ Frontend deployed successfully!"
