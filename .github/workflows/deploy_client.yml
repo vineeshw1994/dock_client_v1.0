@@ -1,4 +1,4 @@
-name: Deploy Client
+name: Deploy Client (Dockerized)
 
 on:
   push:
@@ -9,12 +9,23 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      # Checkout repo
+      # Checkout the code
       - name: Checkout code
         uses: actions/checkout@v3
 
-      # SSH Deploy
-      - name: Deploy via SSH
+      # Build & Push Docker Image to Docker Hub
+      - name: Build and Push Docker Image
+        run: |
+          echo "🔧 Building frontend Docker image..."
+          docker build -t vineeshw1994/genz-frontend -f Dockerfile .
+
+          echo "${{ secrets.DOCKER_HUB_TOKEN }}" | docker login -u "${{ secrets.DOCKER_HUB_USER }}" --password-stdin
+
+          echo "📦 Pushing frontend image to Docker Hub..."
+          docker push vineeshw1994/genz-frontend:latest
+
+      # SSH Deploy to production server
+      - name: SSH Deploy to Server
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.PROD_HOST }}
@@ -22,22 +33,14 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           port: 22
           script: |
-            echo "🔄 Deploying Client..."
+            echo "🚀 Deploying Frontend..."
 
-            cd /var/www/Git_Actions/dock_client_v1.0
+            cd /var/www/Git_Actions
 
-            git checkout main
-            git fetch origin
-            git reset --hard origin/main
-            git clean -fd
+            echo "🧱 Pulling latest frontend Docker image..."
+            docker pull vineeshw1994/genz-frontend:latest
 
-            echo "📦 Installing dependencies..."
-            npm install
+            echo "♻️ Restarting frontend container..."
+            docker-compose up -d frontend
 
-            echo "🏗️ Building frontend..."
-            npm run build
-
-            echo "🚀 Restarting PM2..."
-            pm2 restart F_GH_A_client || pm2 start "npx serve -s dist" --name F_GH_A_client
-
-            echo "✅ Client deployed successfully!"
+            echo "✅ Frontend deployed successfully!"
